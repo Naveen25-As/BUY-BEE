@@ -1,0 +1,14 @@
+.mnu{
+    background-color: rgb(81, 86, 66);
+    color: goldenrod;
+    font-size: xx-large;
+    
+}
+.man{
+    margin: 0;
+}
+.navi{
+    margin: 0;
+    height: 175px;
+    width: 175px;
+}

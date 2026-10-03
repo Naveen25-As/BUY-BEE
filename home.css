@@ -1,0 +1,98 @@
+.mari {
+    color: goldenrod;
+    font-size: 20px;
+}
+
+.form {
+    flex: 1;
+    height: 38px;
+    padding-left: 10px;
+    align-items: center;
+    margin-right: 0px;
+    border-radius: 6px 0px 0px 6px;
+    border: 1px solid #d0d7e2;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.search {
+    flex: 1;
+    display: flex;
+    margin-left: 5px;
+    align-items: center;
+    cursor: pointer;
+    padding-right: 20px;
+    max-width: 500px;
+    margin: 0px 20px;
+}
+
+.search-btn {
+    height: 40px;
+    padding: 0 15px;
+    border-radius: 0 6px 6px 0;
+    border: 1px solid goldenrod;
+    background-color: goldenrod;
+    color: white;
+    cursor: pointer;
+}
+
+.search-btn:hover {
+    background-color: #c99700;
+}
+
+.man {
+    display: flex;
+    color: white;
+    margin-left: auto;
+    align-items: center;
+    gap: 15px;
+    margin-right: 20px;
+}
+
+.man a {
+    color: #d0d7e2;
+    text-decoration: none;
+}
+
+.menu {
+    display: flex;
+    gap: 30px;
+}
+
+.menu a {
+    text-decoration: none;
+    color: white;
+}
+
+.bi-heart {
+    font-size: 20px;
+    color: white;
+    margin-right: 10px;
+}
+
+.bi-cart3 {
+    font-size: 20px;
+    color: white;
+    margin-left: 10px;
+}
+
+.navbar a:hover {
+    color: gold;
+}
+
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.carousel-item img {
+    height: 650px;
+    object-fit: cover;
+    padding-top: 0px;
+}
+
+.container {
+    height: 10px;
+    width: 10px;
+}
