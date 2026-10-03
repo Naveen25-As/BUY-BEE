@@ -86,10 +86,10 @@ Buybee/
 ### Local Development Setup
 
 1. **Clone the repository:**
-   ```bash
-   git clone <your-repo-url>
+   [```bash
+   git clone <(https://github.com/Naveen25-As/BUY-BEE)>
    cd Buybee
-   ```
+   ```]
 
 2. **Install dependencies:**
    ```bash
