@@ -6,6 +6,7 @@ export function signToken(userId) {
   });
 }
 
+// `user` is a serialized user (see db/serializers.js#serializeUser).
 export function sendTokenResponse(user, statusCode, res) {
   const token = signToken(user._id);
   const userPayload = {
@@ -14,7 +15,7 @@ export function sendTokenResponse(user, statusCode, res) {
     email: user.email,
     phone: user.phone,
     role: user.role,
-    addresses: user.addresses,
+    addresses: user.addresses || [],
   };
   res.status(statusCode).json({ success: true, token, user: userPayload });
 }

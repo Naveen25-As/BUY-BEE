@@ -3,15 +3,26 @@ export function notFound(req, res, next) {
 }
 
 export function errorHandler(err, req, res, next) {
-  const status = err.statusCode || 500;
-  const message = err.message || 'Internal server error';
-  if (process.env.NODE_ENV !== 'production') {
-    console.error(err);
+  let status = err.statusCode || err.status || 500;
+  let message = err.message || 'Internal server error';
+
+  if (err.type === 'entity.parse.failed') {
+    status = 400;
+    message = 'Invalid JSON body';
   }
+
+  const isProduction = process.env.NODE_ENV === 'production';
+  if (status >= 500) {
+    console.error(err.cause || err);
+    if (isProduction) message = 'Internal server error';
+  } else if (!isProduction) {
+    console.error(message);
+  }
+
   res.status(status).json({
     success: false,
     message,
-    ...(process.env.NODE_ENV !== 'production' && err.stack ? { stack: err.stack } : {}),
+    ...(!isProduction && status >= 500 && err.stack ? { stack: err.stack } : {}),
   });
 }
 

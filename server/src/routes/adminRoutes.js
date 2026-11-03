@@ -1,104 +1,36 @@
 import express from 'express';
-import Order from '../models/Order.js';
-import Product from '../models/Product.js';
-import User from '../models/User.js';
-import Category from '../models/Category.js';
+import { supabase } from '../config/supabase.js';
+import { unwrap } from '../db/errors.js';
+import { serializeProduct } from '../db/serializers.js';
 import { protect, authorize } from '../middleware/auth.js';
+import { AppError } from '../middleware/errorHandler.js';
+import { isNonNegativeInt, uuidParam } from '../utils/validation.js';
 
 const router = express.Router();
+router.param('id', uuidParam('Product'));
 
 router.use(protect, authorize('admin'));
 
 router.get('/dashboard', async (req, res, next) => {
   try {
-    const [
-      totalOrders,
-      totalCustomers,
-      totalProducts,
-      pendingOrders,
-      lowStockProducts,
-      revenueAgg,
-      ordersOverTime,
-      categoryPerformance,
-      topProducts,
-    ] = await Promise.all([
-      Order.countDocuments(),
-      User.countDocuments({ role: 'customer' }),
-      Product.countDocuments({ isActive: true }),
-      Order.countDocuments({ orderStatus: 'pending' }),
-      Product.find({ isActive: true, stock: { $lte: 5 } })
-        .select('name sku stock price')
-        .sort({ stock: 1 })
-        .limit(10),
-      Order.aggregate([
-        { $match: { orderStatus: { $ne: 'cancelled' } } },
-        { $group: { _id: null, totalRevenue: { $sum: '$total' } } },
-      ]),
-      Order.aggregate([
-        {
-          $match: {
-            createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
-            orderStatus: { $ne: 'cancelled' },
-          },
-        },
-        {
-          $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-            orders: { $sum: 1 },
-            revenue: { $sum: '$total' },
-          },
-        },
-        { $sort: { _id: 1 } },
-      ]),
-      Order.aggregate([
-        { $match: { orderStatus: { $ne: 'cancelled' } } },
-        { $unwind: '$items' },
-        {
-          $lookup: {
-            from: 'products',
-            localField: 'items.product',
-            foreignField: '_id',
-            as: 'product',
-          },
-        },
-        { $unwind: '$product' },
-        {
-          $lookup: {
-            from: 'categories',
-            localField: 'product.category',
-            foreignField: '_id',
-            as: 'category',
-          },
-        },
-        { $unwind: '$category' },
-        {
-          $group: {
-            _id: '$category.name',
-            revenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] } },
-            units: { $sum: '$items.quantity' },
-          },
-        },
-        { $sort: { revenue: -1 } },
-      ]),
-      Product.find({ isActive: true }).sort({ salesCount: -1 }).limit(8).select('name salesCount price'),
-    ]);
-
+    const d = unwrap(await supabase.rpc('admin_dashboard'), 'Failed to load dashboard');
+    const money = (v) => Number(v) || 0;
     res.json({
       success: true,
       data: {
         stats: {
-          totalRevenue: revenueAgg[0]?.totalRevenue || 0,
-          totalOrders,
-          totalCustomers,
-          totalProducts,
-          pendingOrders,
-          lowStockCount: lowStockProducts.length,
+          totalRevenue: money(d.totalRevenue),
+          totalOrders: d.totalOrders,
+          totalCustomers: d.totalCustomers,
+          totalProducts: d.totalProducts,
+          pendingOrders: d.pendingOrders,
+          lowStockCount: d.lowStockProducts.length,
         },
-        lowStockProducts,
+        lowStockProducts: d.lowStockProducts.map((p) => ({ ...p, price: money(p.price) })),
         charts: {
-          ordersOverTime,
-          categoryPerformance,
-          topProducts,
+          ordersOverTime: d.ordersOverTime.map((o) => ({ ...o, revenue: money(o.revenue) })),
+          categoryPerformance: d.categoryPerformance.map((c) => ({ ...c, revenue: money(c.revenue), units: Number(c.units) })),
+          topProducts: d.topProducts.map((p) => ({ ...p, price: money(p.price) })),
         },
       },
     });
@@ -109,14 +41,16 @@ router.get('/dashboard', async (req, res, next) => {
 
 router.get('/inventory', async (req, res, next) => {
   try {
-    const filter = { isActive: true };
-    if (req.query.lowStock === 'true') filter.stock = { $lte: 5 };
-    if (req.query.outOfStock === 'true') filter.stock = 0;
-    const products = await Product.find(filter)
-      .select('name sku stock price brand category')
-      .populate('category', 'name')
-      .sort({ stock: 1 });
-    res.json({ success: true, data: products });
+    let query = supabase
+      .from('products')
+      .select('id,name,sku,stock,price,brand,category:categories(id,name)')
+      .eq('is_active', true)
+      .order('stock', { ascending: true })
+      .order('name');
+    if (req.query.outOfStock === 'true') query = query.eq('stock', 0);
+    else if (req.query.lowStock === 'true') query = query.lte('stock', 5);
+    const products = unwrap(await query, 'Failed to load inventory');
+    res.json({ success: true, data: products.map(serializeProduct) });
   } catch (err) {
     next(err);
   }
@@ -124,12 +58,14 @@ router.get('/inventory', async (req, res, next) => {
 
 router.patch('/inventory/:id', async (req, res, next) => {
   try {
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
-      { stock: req.body.stock },
-      { new: true, runValidators: true }
+    const stock = Number(req.body.stock);
+    if (!isNonNegativeInt(stock)) return next(new AppError('Stock must be a non-negative integer', 400));
+    const product = unwrap(
+      await supabase.from('products').update({ stock }).eq('id', req.params.id).select('*').maybeSingle(),
+      'Failed to update stock'
     );
-    res.json({ success: true, data: product });
+    if (!product) return next(new AppError('Product not found', 404));
+    res.json({ success: true, data: serializeProduct(product) });
   } catch (err) {
     next(err);
   }

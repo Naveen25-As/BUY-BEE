@@ -47,3 +47,6 @@ coverage/
 # Production
 .env.production
 .env.development
+
+# MongoDB migration backups (contain user data)
+server/backups/

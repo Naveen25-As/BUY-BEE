@@ -1,23 +1,36 @@
 import express from 'express';
-import Wishlist from '../models/Wishlist.js';
-import Product from '../models/Product.js';
-import Cart from '../models/Cart.js';
+import { supabase } from '../config/supabase.js';
+import { unwrap } from '../db/errors.js';
+import { serializeWishlist } from '../db/serializers.js';
 import { protect } from '../middleware/auth.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { uuidParam } from '../utils/validation.js';
 
 const router = express.Router();
+router.param('productId', uuidParam('Product'));
+
+const WISHLIST_COLUMNS = '*,wishlist_items(*,product:products(*))';
 
 async function getOrCreateWishlist(userId) {
-  let list = await Wishlist.findOne({ user: userId }).populate('products');
-  if (!list) list = await Wishlist.create({ user: userId, products: [] });
-  return list.populate('products');
+  unwrap(
+    await supabase.from('wishlists').upsert({ user_id: userId }, { onConflict: 'user_id', ignoreDuplicates: true }),
+    'Failed to create wishlist'
+  );
+  return unwrap(
+    await supabase.from('wishlists').select(WISHLIST_COLUMNS).eq('user_id', userId).single(),
+    'Failed to load wishlist'
+  );
+}
+
+async function sendWishlist(res, userId) {
+  res.json({ success: true, data: serializeWishlist(await getOrCreateWishlist(userId)) });
 }
 
 router.use(protect);
 
 router.get('/', async (req, res, next) => {
   try {
-    res.json({ success: true, data: await getOrCreateWishlist(req.user._id) });
+    await sendWishlist(res, req.user._id);
   } catch (err) {
     next(err);
   }
@@ -25,15 +38,22 @@ router.get('/', async (req, res, next) => {
 
 router.post('/:productId', async (req, res, next) => {
   try {
-    const product = await Product.findById(req.params.productId);
-    if (!product || !product.isActive) return next(new AppError('Product not found', 404));
+    const product = unwrap(
+      await supabase.from('products').select('id,is_active').eq('id', req.params.productId).maybeSingle(),
+      'Failed to load product'
+    );
+    if (!product || !product.is_active) return next(new AppError('Product not found', 404));
     const list = await getOrCreateWishlist(req.user._id);
-    const exists = list.products.some((p) => p._id.toString() === product._id.toString());
-    if (!exists) {
-      list.products.push(product._id);
-      await list.save();
-    }
-    res.json({ success: true, data: await list.populate('products') });
+    unwrap(
+      await supabase
+        .from('wishlist_items')
+        .upsert(
+          { wishlist_id: list.id, product_id: product.id },
+          { onConflict: 'wishlist_id,product_id', ignoreDuplicates: true }
+        ),
+      'Failed to add to wishlist'
+    );
+    await sendWishlist(res, req.user._id);
   } catch (err) {
     next(err);
   }
@@ -42,9 +62,11 @@ router.post('/:productId', async (req, res, next) => {
 router.delete('/:productId', async (req, res, next) => {
   try {
     const list = await getOrCreateWishlist(req.user._id);
-    list.products = list.products.filter((p) => p._id.toString() !== req.params.productId);
-    await list.save();
-    res.json({ success: true, data: await list.populate('products') });
+    unwrap(
+      await supabase.from('wishlist_items').delete().eq('wishlist_id', list.id).eq('product_id', req.params.productId),
+      'Failed to remove from wishlist'
+    );
+    await sendWishlist(res, req.user._id);
   } catch (err) {
     next(err);
   }
@@ -52,20 +74,13 @@ router.delete('/:productId', async (req, res, next) => {
 
 router.post('/:productId/move-to-cart', async (req, res, next) => {
   try {
-    const productId = req.params.productId;
-    const product = await Product.findById(productId);
-    if (!product) return next(new AppError('Product not found', 404));
-    let cart = await Cart.findOne({ user: req.user._id });
-    if (!cart) cart = await Cart.create({ user: req.user._id, items: [] });
-    const idx = cart.items.findIndex((i) => i.product.toString() === productId);
-    const qty = idx >= 0 ? cart.items[idx].quantity + 1 : 1;
-    if (qty > product.stock) return next(new AppError(`Only ${product.stock} in stock`, 400));
-    if (idx >= 0) cart.items[idx].quantity = qty;
-    else cart.items.push({ product: productId, quantity: 1, price: product.price });
-    await cart.save();
-    const list = await getOrCreateWishlist(req.user._id);
-    list.products = list.products.filter((p) => p._id.toString() !== productId);
-    await list.save();
+    unwrap(
+      await supabase.rpc('move_wishlist_item_to_cart', {
+        p_user_id: req.user._id,
+        p_product_id: req.params.productId,
+      }),
+      'Failed to move item to cart'
+    );
     res.json({ success: true, message: 'Moved to cart' });
   } catch (err) {
     next(err);
