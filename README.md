@@ -1,6 +1,6 @@
 # BUY BEE
 
-Modern full-stack e-commerce platform for technology products — built with React, Node.js, Express, and MongoDB.
+Modern full-stack e-commerce platform for technology products — built with React, Node.js, Express, and Supabase PostgreSQL.
 
 ## Features
 
@@ -19,7 +19,7 @@ Modern full-stack e-commerce platform for technology products — built with Rea
 
 ### Admin Features
 - **Secure Admin Panel:** Role-based access control
-- **Dashboard Analytics:** Real-time MongoDB-based analytics (revenue, orders, customers, products)
+- **Dashboard Analytics:** Real-time PostgreSQL-based analytics (revenue, orders, customers, products)
 - **Product Management:** Create, read, update, delete products with search
 - **Category Management:** Full CRUD operations for product categories
 - **Order Management:** View, search, filter, and update order status
@@ -34,8 +34,8 @@ Modern full-stack e-commerce platform for technology products — built with Rea
 |--------|------------|
 | **Frontend** | React 19, Vite, React Router, Tailwind CSS v4, Axios, Recharts, React Hot Toast |
 | **Backend** | Node.js, Express.js, JWT, bcrypt, helmet, cors, rate limiting |
-| **Database** | MongoDB, Mongoose |
-| **DevOps** | Vercel (frontend), Render/Railway (backend), MongoDB Atlas (database) |
+| **Database** | Supabase PostgreSQL (`@supabase/supabase-js`, backend only) |
+| **DevOps** | Vercel (frontend), Render/Railway (backend), Supabase (database) |
 
 ## Project Structure
 
@@ -58,18 +58,21 @@ Buybee/
 │   └── vite.config.js        # Vite configuration
 ├── server/                   # Express backend API
 │   ├── src/
-│   │   ├── config/           # Database configuration
+│   │   ├── config/           # Supabase client (service role, server only)
+│   │   ├── db/               # Row serializers, user queries, DB error mapping
 │   │   ├── middleware/       # Custom middleware (auth, error handling)
-│   │   ├── models/           # Mongoose models (User, Product, Order, etc.)
 │   │   ├── routes/           # API routes (auth, products, orders, etc.)
 │   │   ├── seed/             # Database seeding script
 │   │   ├── utils/            # Utility functions (token generation, order helpers)
 │   │   └── index.js          # Server entry point
+│   ├── supabase/             # SQL migrations + local Supabase-compatible Docker stack
+│   ├── scripts/              # One-time MongoDB -> Supabase data migration
+│   ├── tests/                # End-to-end API tests
 │   ├── .env.example          # Environment variables template
 │   └── package.json          # Backend dependencies
 ├── images/                   # Original BUY BEE assets
 ├── *.html                    # Legacy static pages (preserved for reference)
-├── MONGODB_SETUP.md          # MongoDB setup guide
+├── SUPABASE_SETUP.md         # Supabase setup + data migration guide
 ├── DEPLOYMENT.md             # Deployment guide
 ├── .gitignore                # Git ignore rules
 ├── package.json              # Root package.json with scripts
@@ -79,8 +82,8 @@ Buybee/
 ## Installation
 
 ### Prerequisites
-- Node.js 18+ 
-- MongoDB (local installation or MongoDB Atlas account)
+- Node.js 20+
+- A Supabase project (or Docker for the local stack in `server/supabase/local`)
 - Git
 
 ### Local Development Setup
@@ -98,9 +101,8 @@ Buybee/
    npm install --prefix client
    ```
 
-3. **Set up MongoDB:**
-   - Follow the instructions in `MONGODB_SETUP.md`
-   - Either install MongoDB locally or set up MongoDB Atlas
+3. **Set up Supabase:**
+   - Follow the instructions in `SUPABASE_SETUP.md` (run the SQL files in `server/supabase/migrations`)
 
 4. **Configure environment variables:**
    ```bash
@@ -108,7 +110,7 @@ Buybee/
    cp server/.env.example server/.env
    cp client/.env.example client/.env
    
-   # Edit server/.env with your MongoDB URI and JWT secret
+   # Edit server/.env with SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and JWT_SECRET
    # Edit client/.env with your API URL (usually http://localhost:5000/api)
    ```
 
@@ -144,7 +146,8 @@ Buybee/
 ```env
 PORT=5000
 NODE_ENV=development
-MONGODB_URI=mongodb://127.0.0.1:27017/buybee
+SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key  # backend only, never in client/.env
 JWT_SECRET=your_long_random_secret_at_least_32_characters
 JWT_EXPIRES_IN=7d
 CLIENT_URL=http://localhost:5173
@@ -241,7 +244,8 @@ VITE_API_URL=http://localhost:5000/api
 - **Rate Limiting:** Protection against brute force attacks
 - **CORS Configuration:** Proper cross-origin resource sharing
 - **Helmet:** Security headers for Express
-- **MongoDB Sanitization:** Protection against NoSQL injection
+- **Database Access:** Only the backend holds the Supabase service role key; RLS blocks the public anon key
+- **Safe Queries:** Parameterized Supabase/PostgREST queries and Postgres functions (no string-built SQL)
 - **Input Validation:** Request validation with express-validator
 - **Error Handling:** Global error handling without exposing stack traces
 
@@ -259,12 +263,11 @@ For detailed deployment instructions, see `DEPLOYMENT.md`.
 **Backend (Render/Railway):**
 - Root directory: `server`
 - Start command: `npm start`
-- Environment: `MONGODB_URI`, `JWT_SECRET`, `CLIENT_URL`
+- Environment: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, `CLIENT_URL`
 
-**Database (MongoDB Atlas):**
-- Set up free M0 cluster
-- Configure IP whitelist
-- Get connection string
+**Database (Supabase):**
+- Create a project and run the SQL migrations (`SUPABASE_SETUP.md`)
+- Copy the Project URL and service_role key into the backend environment
 
 ## Performance Optimizations
 
@@ -275,15 +278,15 @@ For detailed deployment instructions, see `DEPLOYMENT.md`.
   - Responsive design with Tailwind CSS
 
 - **Backend:**
-  - MongoDB connection pooling
+  - Transactional Postgres functions for checkout, cancellation and cart updates
   - Indexed database queries
   - Rate limiting to prevent abuse
-  - Efficient aggregation pipelines for analytics
+  - Dashboard analytics computed in a single SQL function
 
 - **Database:**
   - Proper indexes on frequently queried fields
-  - Text search for product search
-  - Connection pooling for better performance
+  - PostgreSQL full-text search (`tsvector` + GIN index) for product search
+  - Foreign keys, unique and check constraints for data integrity
 
 ## Testing
 
@@ -332,10 +335,9 @@ For detailed deployment instructions, see `DEPLOYMENT.md`.
 
 ### Common Issues
 
-**MongoDB Connection Failed:**
-- Verify MongoDB is running or Atlas connection string is correct
-- Check IP whitelist in MongoDB Atlas
-- Ensure database user has correct permissions
+**Supabase Connection Failed:**
+- Verify `SUPABASE_URL` and that `SUPABASE_SERVICE_ROLE_KEY` is the service_role key
+- Make sure the SQL migrations were run (see `SUPABASE_SETUP.md`)
 
 **CORS Errors:**
 - Verify `CLIENT_URL` in backend matches frontend URL
@@ -366,7 +368,7 @@ This project is proprietary software. All rights reserved.
 ## Support
 
 For issues and questions:
-- Check the documentation in `MONGODB_SETUP.md` and `DEPLOYMENT.md`
+- Check the documentation in `SUPABASE_SETUP.md` and `DEPLOYMENT.md`
 - Review the API documentation above
 - Check the troubleshooting section
 

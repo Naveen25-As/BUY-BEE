@@ -1,11 +1,30 @@
 import 'dotenv/config';
-import mongoose from 'mongoose';
-import User from '../models/User.js';
-import Category from '../models/Category.js';
-import Product from '../models/Product.js';
-import Coupon from '../models/Coupon.js';
+import bcrypt from 'bcryptjs';
+import { supabase } from '../config/supabase.js';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/buybee';
+const FORCE = process.argv.includes('--force');
+
+// Deleted child-first so foreign keys are respected.
+const TABLES_IN_DELETE_ORDER = [
+  'reviews',
+  'order_status_history',
+  'order_items',
+  'orders',
+  'cart_items',
+  'carts',
+  'wishlist_items',
+  'wishlists',
+  'addresses',
+  'coupons',
+  'products',
+  'categories',
+  'profiles',
+];
+
+function check({ data, error }, step) {
+  if (error) throw new Error(`${step}: ${error.message}`);
+  return data;
+}
 
 const img = (id) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=800&q=80`;
 
@@ -176,90 +195,125 @@ const productsTemplate = [
 ];
 
 async function seed() {
-  await mongoose.connect(MONGODB_URI);
-  console.log('Clearing collections...');
-  await Promise.all([
-    User.deleteMany({}),
-    Category.deleteMany({}),
-    Product.deleteMany({}),
-    Coupon.deleteMany({}),
-  ]);
+  const counts = await Promise.all(
+    ['profiles', 'products', 'orders'].map(async (table) => {
+      const { count, error } = await supabase.from(table).select('id', { count: 'exact', head: true });
+      if (error) throw new Error(`Checking ${table}: ${error.message}`);
+      return count || 0;
+    })
+  );
+  if (counts.some(Boolean) && !FORCE) {
+    console.error('Database already contains data. Refusing to seed.');
+    console.error('Re-run with `npm run seed -- --force` to DELETE ALL DATA (users, orders, products...) and reseed.');
+    process.exit(1);
+  }
 
-  const categoryDocs = await Category.insertMany(categories);
-  const catMap = Object.fromEntries(categoryDocs.map((c) => [c.slug, c._id]));
+  if (FORCE) {
+    console.log('Clearing tables...');
+    for (const table of TABLES_IN_DELETE_ORDER) {
+      check(await supabase.from(table).delete().not('id', 'is', null), `Clearing ${table}`);
+    }
+  }
 
-  await User.create([
-    {
-      name: 'Buy Bee Admin',
-      email: 'admin@buybee.com',
-      phone: '9876543210',
-      password: 'Admin@12345',
-      role: 'admin',
-    },
-    {
-      name: 'Demo Customer',
-      email: 'customer@buybee.com',
-      phone: '9123456780',
-      password: 'Customer@123',
-      role: 'customer',
-      addresses: [
+  const categoryRows = check(
+    await supabase.from('categories').insert(categories).select('id,slug'),
+    'Inserting categories'
+  );
+  const catMap = Object.fromEntries(categoryRows.map((c) => [c.slug, c.id]));
+
+  const users = check(
+    await supabase
+      .from('profiles')
+      .insert([
         {
-          fullName: 'Demo Customer',
-          phone: '9123456780',
-          addressLine: '42 Tech Park Road, Block B',
-          city: 'Bengaluru',
-          state: 'Karnataka',
-          postalCode: '560001',
-          country: 'India',
-          addressType: 'home',
-          isDefault: true,
+          name: 'Buy Bee Admin',
+          email: 'admin@buybee.com',
+          phone: '9876543210',
+          password_hash: await bcrypt.hash('Admin@12345', 12),
+          role: 'admin',
         },
-      ],
-    },
-  ]);
+        {
+          name: 'Demo Customer',
+          email: 'customer@buybee.com',
+          phone: '9123456780',
+          password_hash: await bcrypt.hash('Customer@123', 12),
+          role: 'customer',
+        },
+      ])
+      .select('id,email'),
+    'Inserting users'
+  );
+  const customer = users.find((u) => u.email === 'customer@buybee.com');
 
-  const products = productsTemplate.map((p) => {
-    const { category, ...rest } = p;
-    return {
-      ...rest,
-      category: catMap[category],
-      rating: { rating: 4.2 + Math.random() * 0.7, numReviews: Math.floor(Math.random() * 80) + 5 },
-    };
-  });
-  await Product.insertMany(products);
+  check(
+    await supabase.from('addresses').insert({
+      user_id: customer.id,
+      full_name: 'Demo Customer',
+      phone: '9123456780',
+      address_line: '42 Tech Park Road, Block B',
+      city: 'Bengaluru',
+      state: 'Karnataka',
+      postal_code: '560001',
+      country: 'India',
+      address_type: 'home',
+      is_default: true,
+    }),
+    'Inserting address'
+  );
 
-  const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-  await Coupon.insertMany([
-    {
-      code: 'WELCOME10',
-      description: '10% off for new customers',
-      discountType: 'percent',
-      discountValue: 10,
-      minOrderAmount: 999,
-      maxDiscount: 1500,
-      expiresAt: in30Days,
-      usageLimit: 500,
-      isActive: true,
-    },
-    {
-      code: 'FLAT500',
-      description: 'Flat ₹500 off on orders above ₹5000',
-      discountType: 'fixed',
-      discountValue: 500,
-      minOrderAmount: 5000,
-      expiresAt: in30Days,
-      usageLimit: 200,
-      isActive: true,
-    },
-  ]);
+  const products = productsTemplate.map((p) => ({
+    name: p.name,
+    description: p.description,
+    brand: p.brand,
+    category_id: catMap[p.category],
+    price: p.price,
+    original_price: p.originalPrice ?? null,
+    stock: p.stock,
+    sku: p.sku,
+    tags: p.tags,
+    is_featured: p.isFeatured,
+    images: p.images,
+    specifications: p.specifications,
+    sales_count: p.salesCount,
+    rating: Math.round((4.2 + Math.random() * 0.7) * 10) / 10,
+    num_reviews: Math.floor(Math.random() * 80) + 5,
+  }));
+  check(await supabase.from('products').insert(products), 'Inserting products');
+
+  const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  check(
+    await supabase.from('coupons').insert([
+      {
+        code: 'WELCOME10',
+        description: '10% off for new customers',
+        discount_type: 'percent',
+        discount_value: 10,
+        min_order_amount: 999,
+        max_discount: 1500,
+        expires_at: in30Days,
+        usage_limit: 500,
+        is_active: true,
+      },
+      {
+        code: 'FLAT500',
+        description: 'Flat ₹500 off on orders above ₹5000',
+        discount_type: 'fixed',
+        discount_value: 500,
+        min_order_amount: 5000,
+        expires_at: in30Days,
+        usage_limit: 200,
+        is_active: true,
+      },
+    ]),
+    'Inserting coupons'
+  );
 
   console.log('Seed complete.');
   console.log('Admin: admin@buybee.com / Admin@12345');
   console.log('Customer: customer@buybee.com / Customer@123');
-  await mongoose.disconnect();
 }
 
 seed().catch((err) => {
-  console.error(err);
+  console.error(err.message || err);
   process.exit(1);
 });

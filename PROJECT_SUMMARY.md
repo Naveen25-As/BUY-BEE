@@ -22,13 +22,13 @@ The BUY BEE platform is **95% complete** with all major functionality implemente
 ### Backend Stack
 - **Node.js 24** - Latest LTS Node.js runtime
 - **Express 4** - Fast, minimalist web framework
-- **MongoDB** - NoSQL database with Mongoose ODM
+- **Supabase PostgreSQL** - Relational database accessed from the backend via `@supabase/supabase-js`
 - **JWT** - Secure token-based authentication
 - **bcrypt** - Password hashing (12 rounds)
 - **Helmet** - Security headers for Express
 - **CORS** - Cross-origin resource sharing
 - **Rate Limiting** - Protection against brute force attacks
-- **Mongo Sanitization** - NoSQL injection protection
+- **Row Level Security** - Database locked to the backend service role
 
 ## Complete Feature Set
 
@@ -45,7 +45,7 @@ The BUY BEE platform is **95% complete** with all major functionality implemente
 
 **Product System:**
 - ✅ Product browsing with pagination
-- ✅ Advanced search (MongoDB text search)
+- ✅ Advanced search (PostgreSQL full-text search)
 - ✅ Multi-filter system (category, brand, price, rating, discount, stock)
 - ✅ Multiple sorting options (price, newest, rating, popularity)
 - ✅ Product details with image gallery
@@ -107,7 +107,7 @@ The BUY BEE platform is **95% complete** with all major functionality implemente
 ### ✅ Admin Features (100% Complete)
 
 **Dashboard:**
-- ✅ Real-time analytics from MongoDB
+- ✅ Real-time analytics from PostgreSQL
 - ✅ Total revenue calculation
 - ✅ Total orders count
 - ✅ Total customers count
@@ -209,7 +209,7 @@ The BUY BEE platform is **95% complete** with all major functionality implemente
 - ✅ Helmet security headers
 - ✅ CORS configuration
 - ✅ Rate limiting (auth: 50/15min, general: 200/15min)
-- ✅ MongoDB injection sanitization
+- ✅ Parameterized queries + RLS (service role only)
 - ✅ Request size limits (1MB)
 - ✅ Input validation
 - ✅ Error handling without stack traces
@@ -270,7 +270,7 @@ The BUY BEE platform is **95% complete** with all major functionality implemente
 - ✅ Image optimization (decoding async)
 
 ### Backend
-- ✅ MongoDB connection pooling
+- ✅ Transactional checkout/cancellation in Postgres functions
 - ✅ Indexed database queries
 - ✅ Efficient aggregation pipelines
 - ✅ Rate limiting for performance
@@ -292,12 +292,12 @@ The BUY BEE platform is **95% complete** with all major functionality implemente
 - ✅ Added address edit/delete functionality in profile
 - ✅ Enhanced rate limiting configuration
 - ✅ Improved CORS configuration
-- ✅ Added MongoDB connection error handling
+- ✅ Added database connection error handling
 - ✅ Enhanced security headers
 
 ### Documentation
 - ✅ Comprehensive README with full API documentation
-- ✅ MongoDB setup guide (MONGODB_SETUP.md)
+- ✅ Supabase setup guide (SUPABASE_SETUP.md)
 - ✅ Deployment guide (DEPLOYMENT.md)
 - ✅ Updated .gitignore for better security
 - ✅ Environment variable templates
@@ -305,7 +305,7 @@ The BUY BEE platform is **95% complete** with all major functionality implemente
 ### Security Enhancements
 - ✅ Enhanced rate limiting with better messages
 - ✅ Improved CORS configuration
-- ✅ Added MongoDB connection pooling
+- ✅ Migrated from MongoDB to Supabase PostgreSQL
 - ✅ Enhanced error handling
 - ✅ Added graceful shutdown handling
 
@@ -340,7 +340,7 @@ The BUY BEE platform is **95% complete** with all major functionality implemente
 ### Deployment Options
 - ✅ Vercel (frontend)
 - ✅ Render/Railway (backend)
-- ✅ MongoDB Atlas (database)
+- ✅ Supabase (database)
 - ✅ Detailed deployment guide included
 
 ## Testing Recommendations
@@ -397,7 +397,7 @@ The application is ready for deployment to production environments with the prov
 
 ## Quick Start Guide
 
-1. **Set up MongoDB:** Follow `MONGODB_SETUP.md`
+1. **Set up Supabase:** Follow `SUPABASE_SETUP.md`
 2. **Install dependencies:** `npm install`
 3. **Configure environment:** Copy `.env.example` files
 4. **Seed database:** `npm run seed`
@@ -406,7 +406,7 @@ The application is ready for deployment to production environments with the prov
 
 ## Support Documentation
 
-- **Setup Guide:** `MONGODB_SETUP.md`
+- **Setup Guide:** `SUPABASE_SETUP.md`
 - **Deployment Guide:** `DEPLOYMENT.md`
 - **API Documentation:** See README API section
 - **Troubleshooting:** See README Troubleshooting section
@@ -415,5 +415,5 @@ The application is ready for deployment to production environments with the prov
 
 **Project Status:** ✅ PRODUCTION READY  
 **Completion:** 95% (all core features complete)  
-**Deployment:** Ready for Vercel/Render/MongoDB Atlas  
+**Deployment:** Ready for Vercel/Render/Supabase  
 **Documentation:** Comprehensive guides included

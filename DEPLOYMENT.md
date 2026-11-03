@@ -4,8 +4,8 @@ This guide covers deploying the BUY BEE e-commerce platform to production.
 
 ## Prerequisites
 
-- MongoDB Atlas account (recommended) or MongoDB instance
-- Node.js 18+ installed
+- Supabase account (https://supabase.com)
+- Node.js 20+ installed
 - Git
 - Deployment accounts (Vercel for frontend, Render/Railway for backend)
 
@@ -14,22 +14,23 @@ This guide covers deploying the BUY BEE e-commerce platform to production.
 ```
 Frontend (React/Vite) → Vercel
 Backend (Express/Node.js) → Render/Railway
-Database (MongoDB) → MongoDB Atlas
+Database (PostgreSQL) → Supabase (accessed only by the backend)
 ```
 
-## Step 1: Database Setup (MongoDB Atlas)
+## Step 1: Database Setup (Supabase)
 
-1. **Create MongoDB Atlas Cluster:**
-   - Go to https://www.mongodb.com/cloud/atlas
-   - Create a free M0 cluster
-   - Set up database user with strong password
-   - Whitelist IP: `0.0.0.0/0` (allow all for deployment)
-   - Get connection string
+1. **Create the Supabase project and schema:** follow `SUPABASE_SETUP.md` (run the three SQL files in
+   `server/supabase/migrations` in order).
 
-2. **Update Backend Environment Variables:**
+2. **(Optional) Migrate existing MongoDB data:** run `npm run migrate:mongo` (dry run) and then
+   `npm run migrate:mongo -- --execute` from `server/`, see `SUPABASE_SETUP.md` section 5.
+   Keep MongoDB until the deployed app is verified.
+
+3. **Collect the backend environment variables:**
    ```env
-   MONGODB_URI=mongodb+srv://YOUR_USERNAME:YOUR_PASSWORD@cluster0.mongodb.net/buybee?retryWrites=true&w=majority
-   JWT_SECRET=your_long_random_secret_at_least_32_characters
+   SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key   # secret, backend only
+   JWT_SECRET=your_long_random_secret_at_least_32_characters  # keep the old value to keep existing sessions valid
    CLIENT_URL=https://your-frontend.vercel.app
    ```
 
@@ -56,12 +57,14 @@ Database (MongoDB) → MongoDB Atlas
    - Connect your GitHub repository
    - Configure:
      - **Root Directory:** `server`
+     - **Runtime:** Node 20+ (set `NODE_VERSION=20` if needed)
      - **Build Command:** `npm install`
      - **Start Command:** `npm start`
      - **Environment Variables:**
        - `PORT`: `5000`
        - `NODE_ENV`: `production`
-       - `MONGODB_URI`: (your MongoDB Atlas connection string)
+       - `SUPABASE_URL`: (Supabase Project URL)
+       - `SUPABASE_SERVICE_ROLE_KEY`: (Supabase service_role key, mark it as secret)
        - `JWT_SECRET`: (your secure secret)
        - `CLIENT_URL`: (your Vercel frontend URL)
 
@@ -104,6 +107,7 @@ Database (MongoDB) → MongoDB Atlas
      - **Root Directory:** `client`
      - **Environment Variables:**
        - `VITE_API_URL`: (your backend URL + `/api`)
+       - Do **not** add any Supabase variables to Vercel: the frontend only talks to the Express API.
    - Click "Deploy"
 
 4. **Get Frontend URL:**
@@ -132,16 +136,13 @@ app.use(
 
 After deployment, you may want to seed your production database with initial data:
 
-1. **Connect to your deployed backend:**
-   ```bash
-   # SSH into your Render/Railway instance or use their web terminal
-   ```
+Skip this if you migrated MongoDB data. Otherwise, from your machine with `server/.env` pointing at the
+production Supabase project:
 
-2. **Run seed script:**
-   ```bash
-   cd server
-   npm run seed
-   ```
+```bash
+cd server
+npm run seed   # refuses to run if the database already contains data
+```
 
 ## Environment Variables Summary
 
@@ -149,7 +150,8 @@ After deployment, you may want to seed your production database with initial dat
 ```env
 PORT=5000
 NODE_ENV=production
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/buybee?retryWrites=true&w=majority
+SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 JWT_SECRET=your_long_random_secret_at_least_32_characters
 JWT_EXPIRES_IN=7d
 CLIENT_URL=https://your-frontend.vercel.app
@@ -195,9 +197,9 @@ After deployment, verify:
 ### Backend Issues
 
 **Database Connection Failed:**
-- Verify MongoDB Atlas connection string
-- Check IP whitelist includes `0.0.0.0/0`
-- Ensure database user has correct permissions
+- Startup log shows `Supabase connection failed: ...`
+- Verify `SUPABASE_URL` and that `SUPABASE_SERVICE_ROLE_KEY` is the service_role key (not the anon key)
+- Make sure all three migration files were run (see `SUPABASE_SETUP.md`)
 
 **JWT Errors:**
 - Verify `JWT_SECRET` is set and consistent
@@ -222,16 +224,16 @@ After deployment, verify:
   - Faster build times
   - Dedicated instances
 
-### Database (MongoDB Atlas)
-- Monitor slow queries
-- Add indexes for frequently queried fields
-- Consider MongoDB Atlas search for advanced search
+### Database (Supabase)
+- Monitor slow queries in Supabase -> Reports / Query Performance
+- Indexes for common filters, a full-text search index and foreign-key indexes are created by the migrations
 
 ## Security Checklist
 
 - [ ] Change default admin password
 - [ ] Use strong `JWT_SECRET` (32+ characters)
-- [ ] Enable MongoDB Atlas security features
+- [ ] Keep `SUPABASE_SERVICE_ROLE_KEY` only in the Render environment (never in Vercel or git)
+- [ ] Confirm RLS is enabled on all tables (Supabase -> Table Editor shows "RLS enabled")
 - [ ] Use HTTPS (automatic on Vercel/Render)
 - [ ] Set up monitoring/alerts
 - [ ] Regular database backups
@@ -249,16 +251,15 @@ After deployment, verify:
 - Metrics dashboard
 - Alert configurations
 
-### MongoDB Atlas
-- Real-time performance metrics
-- Slow query analysis
-- Storage monitoring
+### Supabase
+- Database reports and query performance
+- API / Postgres logs
 
 ## Backup Strategy
 
 ### Database Backups
-- MongoDB Atlas provides automatic backups
-- Enable continuous backups for production
+- Supabase provides daily backups on paid plans; enable Point-in-Time Recovery for production
+- `pg_dump` against the Supabase connection string for manual backups
 - Test restore process periodically
 
 ### Code Backups
@@ -287,13 +288,13 @@ After deployment, verify:
 
 - **Vercel:** Free for hobby projects
 - **Render:** Free tier available (limited hours)
-- **MongoDB Atlas:** Free M0 cluster (512MB storage)
+- **Supabase:** Free tier (500MB database)
 
 **Estimated Monthly Cost (Production):**
 - Vercel Pro: $20/month
 - Render Pro: $7/month minimum
-- MongoDB Atlas M10: $57/month
-- **Total:** ~$84/month for small production setup
+- Supabase Pro: $25/month
+- **Total:** ~$52/month for small production setup
 
 ## Post-Deployment Tasks
 
@@ -322,5 +323,5 @@ After deployment, verify:
 
 - **Vercel Docs:** https://vercel.com/docs
 - **Render Docs:** https://render.com/docs
-- **MongoDB Atlas Docs:** https://docs.atlas.mongodb.com
+- **Supabase Docs:** https://supabase.com/docs
 - **Vite Deployment:** https://vitejs.dev/guide/build.html

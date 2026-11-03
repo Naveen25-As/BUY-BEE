@@ -1,19 +1,27 @@
 import express from 'express';
-import Review from '../models/Review.js';
-import Order from '../models/Order.js';
-import Product from '../models/Product.js';
+import { supabase } from '../config/supabase.js';
+import { unwrap } from '../db/errors.js';
+import { serializeReview } from '../db/serializers.js';
 import { protect, authorize } from '../middleware/auth.js';
 import { AppError } from '../middleware/errorHandler.js';
-import { updateProductRating } from '../utils/updateProductRating.js';
+import { isNonEmptyString, isUuid, uuidParam } from '../utils/validation.js';
 
 const router = express.Router();
+router.param('id', uuidParam('Review'));
+router.param('productId', uuidParam('Product'));
 
 router.get('/product/:productId', async (req, res, next) => {
   try {
-    const reviews = await Review.find({ product: req.params.productId, isApproved: true })
-      .populate('user', 'name')
-      .sort({ createdAt: -1 });
-    res.json({ success: true, data: reviews });
+    const reviews = unwrap(
+      await supabase
+        .from('reviews')
+        .select('*,user:profiles(id,name)')
+        .eq('product_id', req.params.productId)
+        .eq('is_approved', true)
+        .order('created_at', { ascending: false }),
+      'Failed to load reviews'
+    );
+    res.json({ success: true, data: reviews.map(serializeReview) });
   } catch (err) {
     next(err);
   }
@@ -21,28 +29,37 @@ router.get('/product/:productId', async (req, res, next) => {
 
 router.post('/', protect, async (req, res, next) => {
   try {
-    const { productId, orderId, rating, comment } = req.body;
-    const order = await Order.findById(orderId);
-    if (!order || order.user.toString() !== req.user._id.toString()) {
+    const { productId, orderId, comment } = req.body;
+    const rating = Number(req.body.rating);
+    if (!isUuid(orderId)) return next(new AppError('Order not found', 404));
+    if (!isUuid(productId)) return next(new AppError('Product was not in this order', 400));
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      return next(new AppError('Rating must be between 1 and 5', 400));
+    }
+    if (!isNonEmptyString(comment) || comment.trim().length > 2000) {
+      return next(new AppError('Comment is required (max 2000 characters)', 400));
+    }
+    const order = unwrap(
+      await supabase.from('orders').select('id,user_id,order_status,order_items(product_id)').eq('id', orderId).maybeSingle(),
+      'Failed to load order'
+    );
+    if (!order || order.user_id !== req.user._id) {
       return next(new AppError('Order not found', 404));
     }
-    if (order.orderStatus !== 'delivered') {
+    if (order.order_status !== 'delivered') {
       return next(new AppError('You can review only delivered orders', 400));
     }
-    const purchased = order.items.some((i) => i.product.toString() === productId);
-    if (!purchased) return next(new AppError('Product was not in this order', 400));
-    const existing = await Review.findOne({ user: req.user._id, product: productId });
-    if (existing) return next(new AppError('You already reviewed this product', 400));
-
-    const review = await Review.create({
-      user: req.user._id,
-      product: productId,
-      order: orderId,
-      rating,
-      comment,
-    });
-    await updateProductRating(productId);
-    res.status(201).json({ success: true, data: review });
+    if (!order.order_items.some((i) => i.product_id === productId)) {
+      return next(new AppError('Product was not in this order', 400));
+    }
+    const { data, error } = await supabase
+      .from('reviews')
+      .insert({ user_id: req.user._id, product_id: productId, order_id: orderId, rating, comment: comment.trim() })
+      .select('*')
+      .single();
+    if (error?.code === '23505') return next(new AppError('You already reviewed this product', 400));
+    unwrap({ data, error }, 'Failed to create review');
+    res.status(201).json({ success: true, data: serializeReview(data) });
   } catch (err) {
     next(err);
   }
@@ -50,12 +67,15 @@ router.post('/', protect, async (req, res, next) => {
 
 router.get('/', protect, authorize('admin'), async (req, res, next) => {
   try {
-    const reviews = await Review.find()
-      .populate('user', 'name email')
-      .populate('product', 'name')
-      .sort({ createdAt: -1 })
-      .limit(200);
-    res.json({ success: true, data: reviews });
+    const reviews = unwrap(
+      await supabase
+        .from('reviews')
+        .select('*,user:profiles(id,name,email),product:products(id,name)')
+        .order('created_at', { ascending: false })
+        .limit(200),
+      'Failed to load reviews'
+    );
+    res.json({ success: true, data: reviews.map(serializeReview) });
   } catch (err) {
     next(err);
   }
@@ -63,14 +83,18 @@ router.get('/', protect, authorize('admin'), async (req, res, next) => {
 
 router.patch('/:id/moderate', protect, authorize('admin'), async (req, res, next) => {
   try {
-    const review = await Review.findByIdAndUpdate(
-      req.params.id,
-      { isApproved: req.body.isApproved },
-      { new: true }
+    if (typeof req.body.isApproved !== 'boolean') return next(new AppError('isApproved must be a boolean', 400));
+    const review = unwrap(
+      await supabase
+        .from('reviews')
+        .update({ is_approved: req.body.isApproved })
+        .eq('id', req.params.id)
+        .select('*')
+        .maybeSingle(),
+      'Failed to update review'
     );
     if (!review) return next(new AppError('Review not found', 404));
-    await updateProductRating(review.product);
-    res.json({ success: true, data: review });
+    res.json({ success: true, data: serializeReview(review) });
   } catch (err) {
     next(err);
   }
@@ -78,9 +102,11 @@ router.patch('/:id/moderate', protect, authorize('admin'), async (req, res, next
 
 router.delete('/:id', protect, authorize('admin'), async (req, res, next) => {
   try {
-    const review = await Review.findByIdAndDelete(req.params.id);
+    const review = unwrap(
+      await supabase.from('reviews').delete().eq('id', req.params.id).select('id').maybeSingle(),
+      'Failed to delete review'
+    );
     if (!review) return next(new AppError('Review not found', 404));
-    await updateProductRating(review.product);
     res.json({ success: true, message: 'Review deleted' });
   } catch (err) {
     next(err);
