@@ -1,0 +1,37 @@
+# Local Supabase-compatible stack (Postgres + PostgREST) for development and API tests.
+# Usage: see server/supabase/README.md
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "54322:5432"
+    volumes:
+      - ./bootstrap.sql:/docker-entrypoint-initdb.d/00_bootstrap.sql:ro
+      - ../migrations/0001_initial_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ../migrations/0002_functions.sql:/docker-entrypoint-initdb.d/02_functions.sql:ro
+      - ../migrations/0003_security.sql:/docker-entrypoint-initdb.d/03_security.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      retries: 30
+  rest:
+    image: postgrest/postgrest:v12.2.3
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://authenticator:authenticator@db:5432/postgres
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${LOCAL_JWT_SECRET:-local-dev-only-jwt-secret-at-least-32-chars}
+  gateway:
+    image: nginx:alpine
+    depends_on:
+      - rest
+    ports:
+      - "54321:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro

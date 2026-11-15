@@ -1,0 +1,29 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-bee-gold: #daa520;
+  --color-bee-dark: #3d4034;
+  --color-bee-slate: #1e293b;
+  --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+  font-family: var(--font-sans);
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center rounded-lg bg-bee-gold px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 disabled:opacity-50;
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300;
+}
+
+.input-field {
+  @apply w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-bee-gold focus:ring-2 focus:ring-amber-200;
+}
+
+.card {
+  @apply rounded-xl border border-slate-200 bg-white shadow-sm;
+}
