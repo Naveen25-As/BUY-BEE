@@ -1,387 +1,467 @@
-# BUY BEE
+# 🛒 BUY-BEE – Full-Stack E-Commerce Platform
 
-Modern full-stack e-commerce platform for technology products — built with React, Node.js, Express, and Supabase PostgreSQL.
+A modern, responsive full-stack e-commerce platform for technology products, featuring secure authentication, product management, shopping cart, wishlist, order processing, and a comprehensive admin dashboard.
 
-## Features
+Built using **React, Node.js, Express.js, and Supabase PostgreSQL**.
 
-### Customer Features
-- **Authentication:** Registration, login, logout with JWT
-- **Password Management:** Forgot password, reset password, change password
-- **Product Browsing:** Browse, search, filter, sort, and paginate products
-- **Product Details:** Image gallery, specifications, related products, reviews
-- **Wishlist:** Add/remove products, move to cart, duplicate prevention
-- **Shopping Cart:** Add items, quantity management, stock validation, real-time totals
-- **Checkout:** Multi-step checkout (address → summary → coupon → payment → confirm)
-- **Payment Methods:** Cash on Delivery, online payment architecture
-- **Orders:** Order history, detailed tracking timeline, order cancellation
-- **Reviews:** Verified purchase reviews with star ratings and comments
-- **Profile:** Edit profile, manage multiple addresses, change password
+---
 
-### Admin Features
-- **Secure Admin Panel:** Role-based access control
-- **Dashboard Analytics:** Real-time PostgreSQL-based analytics (revenue, orders, customers, products)
-- **Product Management:** Create, read, update, delete products with search
-- **Category Management:** Full CRUD operations for product categories
-- **Order Management:** View, search, filter, and update order status
-- **User Management:** View users, manage roles and account status
-- **Inventory Management:** Stock monitoring, low-stock alerts, bulk updates
-- **Coupon Management:** Create, edit, delete, activate/deactivate coupons
-- **Review Moderation:** Approve, hide, or delete customer reviews
+## 🚀 Project Overview
 
-## Tech Stack
+BUY-BEE is a full-stack e-commerce application designed to provide a seamless online shopping experience.
 
-| Layer | Technology |
-|--------|------------|
-| **Frontend** | React 19, Vite, React Router, Tailwind CSS v4, Axios, Recharts, React Hot Toast |
-| **Backend** | Node.js, Express.js, JWT, bcrypt, helmet, cors, rate limiting |
-| **Database** | Supabase PostgreSQL (`@supabase/supabase-js`, backend only) |
-| **DevOps** | Vercel (frontend), Render/Railway (backend), Supabase (database) |
+Customers can browse products, manage shopping carts, place orders, track purchases, and manage their accounts. Administrators can manage products, categories, inventory, orders, customers, coupons, and reviews through a dedicated dashboard.
 
-## Project Structure
+The application follows a client-server architecture with a React frontend, Express REST API, and Supabase PostgreSQL database.
 
+---
+
+## ✨ Key Features
+
+### 👤 Customer Features
+
+- **Authentication:** User registration, login, logout, and JWT-based authentication.
+- **Password Management:** Forgot password, password reset, and change password.
+- **Product Browsing:** Search, filter, sort, and paginate products.
+- **Product Details:** Product images, specifications, related products, and reviews.
+- **Shopping Cart:** Add products, update quantities, and manage cart items.
+- **Wishlist:** Save favorite products and move items to the shopping cart.
+- **Checkout:** Multi-step checkout with address, order summary, and coupon validation.
+- **Payment Options:** Cash on Delivery and online payment architecture.
+- **Order Management:** Order history, order details, tracking timeline, and cancellation.
+- **Product Reviews:** Verified-purchase reviews with ratings and comments.
+- **User Profile:** Update personal information and manage multiple delivery addresses.
+
+### 🛠️ Admin Features
+
+- **Admin Dashboard:** Analytics for revenue, orders, customers, and products.
+- **Product Management:** Create, update, view, and deactivate products.
+- **Category Management:** Manage product categories.
+- **Order Management:** View orders and update order statuses.
+- **User Management:** View customers and manage account status and roles.
+- **Inventory Management:** Monitor stock levels and low-stock products.
+- **Coupon Management:** Create, update, activate, and deactivate discount coupons.
+- **Review Moderation:** Manage and moderate customer reviews.
+- **Role-Based Access:** Protected administrative functionality.
+
+---
+
+## 💻 Technology Stack
+
+| Category | Technologies |
+|---|---|
+| Frontend | React 19, Vite, React Router |
+| Styling | Tailwind CSS v4, CSS |
+| Backend | Node.js, Express.js |
+| Database | Supabase PostgreSQL |
+| Authentication | JWT, bcrypt |
+| API Communication | Axios, REST API |
+| Security | Helmet, CORS, Rate Limiting |
+| Notifications | React Hot Toast |
+| Charts | Recharts |
+| Development Tools | Git, GitHub, npm |
+| Deployment Options | Vercel, Render, Railway |
+
+---
+
+## 🏗️ Application Architecture
+
+```text
+             CUSTOMER / ADMIN
+                    |
+                    |
+             React Frontend
+                (Vite)
+                    |
+                    |
+                Axios
+                    |
+                    |
+             Express REST API
+                    |
+          ---------------------
+          |         |         |
+       Routes   Middleware  Controllers
+          |         |         |
+          ---------------------
+                    |
+                    |
+             Supabase Client
+                    |
+                    |
+           Supabase PostgreSQL
 ```
-Buybee/
-├── client/                    # React frontend application
+
+The frontend communicates with the backend through REST APIs. The backend handles authentication, authorization, business logic, and database operations.
+
+The Supabase service role key is used exclusively on the server side and must never be exposed to the frontend.
+
+---
+
+## 📁 Project Structure
+
+```text
+BUY-BEE/
+│
+├── client/                      # React frontend
+│   ├── public/
 │   ├── src/
-│   │   ├── api/              # Axios client and API configuration
-│   │   ├── components/       # Reusable components (Navbar, Footer, ProductCard, etc.)
-│   │   ├── context/          # React Context (AuthContext)
-│   │   ├── layouts/          # Layout components (MainLayout, AdminLayout)
-│   │   ├── pages/            # Page components (Home, Products, Cart, etc.)
-│   │   │   └── admin/        # Admin pages (Dashboard, Products, Orders, etc.)
-│   │   ├── utils/            # Utility functions (formatting)
-│   │   ├── App.jsx           # Main app component with routing
-│   │   └── index.css         # Global styles and Tailwind config
-│   ├── public/               # Static assets
-│   ├── .env.example          # Environment variables template
-│   ├── package.json          # Frontend dependencies
-│   └── vite.config.js        # Vite configuration
-├── server/                   # Express backend API
+│   │   ├── api/
+│   │   ├── assets/
+│   │   ├── components/
+│   │   ├── context/
+│   │   ├── layouts/
+│   │   ├── pages/
+│   │   │   └── admin/
+│   │   └── utils/
+│   ├── .env.example
+│   └── package.json
+│
+├── server/                      # Express backend
+│   ├── scripts/
 │   ├── src/
-│   │   ├── config/           # Supabase client (service role, server only)
-│   │   ├── db/               # Row serializers, user queries, DB error mapping
-│   │   ├── middleware/       # Custom middleware (auth, error handling)
-│   │   ├── routes/           # API routes (auth, products, orders, etc.)
-│   │   ├── seed/             # Database seeding script
-│   │   ├── utils/            # Utility functions (token generation, order helpers)
-│   │   └── index.js          # Server entry point
-│   ├── supabase/             # SQL migrations + local Supabase-compatible Docker stack
-│   ├── scripts/              # One-time MongoDB -> Supabase data migration
-│   ├── tests/                # End-to-end API tests
-│   ├── .env.example          # Environment variables template
-│   └── package.json          # Backend dependencies
-├── images/                   # Original BUY BEE assets
-├── *.html                    # Legacy static pages (preserved for reference)
-├── SUPABASE_SETUP.md         # Supabase setup + data migration guide
-├── DEPLOYMENT.md             # Deployment guide
-├── .gitignore                # Git ignore rules
-├── package.json              # Root package.json with scripts
-└── README.md                 # This file
+│   │   ├── config/
+│   │   ├── db/
+│   │   ├── middleware/
+│   │   ├── routes/
+│   │   ├── seed/
+│   │   └── utils/
+│   ├── supabase/
+│   │   ├── local/
+│   │   └── migrations/
+│   ├── tests/
+│   ├── .env.example
+│   └── package.json
+│
+├── DEPLOYMENT.md
+├── SUPABASE_SETUP.md
+├── package.json
+├── package-lock.json
+└── README.md
 ```
 
-## Installation
+---
+
+## ⚙️ Installation and Setup
 
 ### Prerequisites
-- Node.js 20+
-- A Supabase project (or Docker for the local stack in `server/supabase/local`)
+
+Make sure you have installed:
+
+- Node.js 20 or later
+- npm
 - Git
+- A Supabase project
+- Code editor (VS Code recommended)
 
-### Local Development Setup
+### 1. Clone the Repository
 
-1. **Clone the repository:**
-   [```bash
-   git clone <(https://github.com/Naveen25-As/BUY-BEE)>
-   cd Buybee
-   ```]
+```bash
+git clone https://github.com/Naveen25-As/BUY-BEE.git
+```
 
-2. **Install dependencies:**
-   ```bash
-   npm install
-   npm install --prefix server
-   npm install --prefix client
-   ```
+Navigate into the project:
 
-3. **Set up Supabase:**
-   - Follow the instructions in `SUPABASE_SETUP.md` (run the SQL files in `server/supabase/migrations`)
+```bash
+cd BUY-BEE
+```
 
-4. **Configure environment variables:**
-   ```bash
-   # Copy environment templates
-   cp server/.env.example server/.env
-   cp client/.env.example client/.env
-   
-   # Edit server/.env with SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and JWT_SECRET
-   # Edit client/.env with your API URL (usually http://localhost:5000/api)
-   ```
+### 2. Install Dependencies
 
-5. **Seed the database:**
-   ```bash
-   npm run seed
-   ```
+Install root dependencies:
 
-6. **Start the development servers:**
-   ```bash
-   # Start both frontend and backend
-   npm run dev
-   
-   # Or start individually:
-   npm run dev:server  # Backend on http://localhost:5000
-   npm run dev:client  # Frontend on http://localhost:5173
-   ```
+```bash
+npm install
+```
 
-### Demo Accounts (after seeding)
+Install backend dependencies:
 
-| Role | Email | Password |
-|------|--------|----------|
-| Admin | admin@buybee.com | Admin@12345 |
-| Customer | customer@buybee.com | Customer@123 |
+```bash
+npm install --prefix server
+```
 
-### Demo Coupons
-- `WELCOME10` - 10% off for new customers (min ₹999)
-- `FLAT500` - Flat ₹500 off on orders above ₹5000
+Install frontend dependencies:
 
-## Environment Variables
+```bash
+npm install --prefix client
+```
 
-### Server (`server/.env`)
+### 3. Configure Supabase
+
+1. Create a Supabase project.
+2. Open the Supabase SQL Editor.
+3. Execute the migration files in the correct order:
+
+```text
+server/supabase/migrations/
+    0001_initial_schema.sql
+    0002_functions.sql
+    0003_security.sql
+```
+
+For additional instructions, refer to `SUPABASE_SETUP.md`.
+
+### 4. Configure Environment Variables
+
+Create the backend environment file:
+
+```bash
+copy server\.env.example server\.env
+```
+
+Create the frontend environment file:
+
+```bash
+copy client\.env.example client\.env
+```
+
+Configure the backend `server/.env`:
+
 ```env
 PORT=5000
 NODE_ENV=development
+
 SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key  # backend only, never in client/.env
-JWT_SECRET=your_long_random_secret_at_least_32_characters
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+
+JWT_SECRET=YOUR_STRONG_RANDOM_SECRET
 JWT_EXPIRES_IN=7d
+
 CLIENT_URL=http://localhost:5173
-SMTP_HOST=smtp.gmail.com  # Optional for password reset emails
+
+SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
+SMTP_USER=YOUR_EMAIL
+SMTP_PASS=YOUR_EMAIL_APP_PASSWORD
 EMAIL_FROM=noreply@buybee.com
 ```
 
-### Client (`client/.env`)
+Configure the frontend `client/.env`:
+
 ```env
 VITE_API_URL=http://localhost:5000/api
 ```
 
-## API Documentation
+**Security Note:** Never commit actual `.env` files, database credentials, service role keys, SMTP passwords, or JWT secrets to GitHub.
 
-### Authentication (`/api/auth`)
-- `POST /register` - Register new user
-- `POST /login` - Login user
-- `GET /me` - Get current user (protected)
-- `POST /forgot-password` - Request password reset
-- `PUT /reset-password/:token` - Reset password
-- `PUT /change-password` - Change password (protected)
+### 5. Seed the Database
 
-### Products (`/api/products`)
-- `GET /` - List products with filtering, sorting, pagination
-- `GET /brands` - Get all product brands
-- `GET /:id/related` - Get related products
-- `GET /:id` - Get single product details
-- `POST /` - Create product (admin only)
-- `PUT /:id` - Update product (admin only)
-- `DELETE /:id` - Deactivate product (admin only)
+Run the database seed command:
 
-### Categories (`/api/categories`)
-- `GET /` - List categories
-- `POST /` - Create category (admin only)
-- `PUT /:id` - Update category (admin only)
-- `DELETE /:id` - Delete category (admin only)
+```bash
+npm run seed
+```
 
-### Cart (`/api/cart`)
-- `GET /` - Get user cart (protected)
-- `POST /items` - Add item to cart (protected)
-- `PATCH /items/:itemId` - Update item quantity (protected)
-- `DELETE /items/:itemId` - Remove item from cart (protected)
-- `DELETE /` - Clear cart (protected)
+The seed script should populate the database with the initial application data.
 
-### Wishlist (`/api/wishlist`)
-- `GET /` - Get user wishlist (protected)
-- `POST /:productId` - Add to wishlist (protected)
-- `DELETE /:productId` - Remove from wishlist (protected)
-- `POST /:productId/move-to-cart` - Move to cart (protected)
+Use only local development accounts for testing. Never reuse development credentials in production.
 
-### Orders (`/api/orders`)
-- `POST /` - Create order (protected)
-- `GET /my` - Get user orders (protected)
-- `GET /:id` - Get order details (protected)
-- `POST /:id/cancel` - Cancel order (protected)
-- `PATCH /:id/status` - Update order status (admin only)
-- `GET /` - Get all orders (admin only)
+### 6. Start the Application
 
-### Users (`/api/users`)
-- `PUT /profile` - Update profile (protected)
-- `POST /addresses` - Add address (protected)
-- `PUT /addresses/:addressId` - Update address (protected)
-- `DELETE /addresses/:addressId` - Delete address (protected)
-- `GET /` - Get all users (admin only)
-- `PATCH /:id/status` - Update user status (admin only)
+Start the frontend and backend:
 
-### Reviews (`/api/reviews`)
-- `GET /product/:productId` - Get product reviews
-- `POST /` - Submit review (protected, verified purchase only)
-- `GET /` - Get all reviews (admin only)
-- `PATCH /:id/moderate` - Moderate review (admin only)
-- `DELETE /:id` - Delete review (admin only)
+```bash
+npm run dev
+```
 
-### Coupons (`/api/coupons`)
-- `POST /validate` - Validate coupon (protected)
-- `GET /` - Get all coupons (admin only)
-- `POST /` - Create coupon (admin only)
-- `PUT /:id` - Update coupon (admin only)
-- `DELETE /:id` - Delete coupon (admin only)
+Alternatively, start them separately:
 
-### Admin (`/api/admin`)
-- `GET /dashboard` - Get dashboard analytics (admin only)
-- `GET /inventory` - Get inventory (admin only)
-- `PATCH /inventory/:id` - Update stock (admin only)
+Backend:
 
-## Security Features
+```bash
+npm run dev:server
+```
 
-- **Password Hashing:** All passwords hashed with bcrypt (12 rounds)
-- **JWT Authentication:** Secure token-based authentication
-- **Role-Based Authorization:** Admin routes protected with role checks
-- **Rate Limiting:** Protection against brute force attacks
-- **CORS Configuration:** Proper cross-origin resource sharing
-- **Helmet:** Security headers for Express
-- **Database Access:** Only the backend holds the Supabase service role key; RLS blocks the public anon key
-- **Safe Queries:** Parameterized Supabase/PostgREST queries and Postgres functions (no string-built SQL)
-- **Input Validation:** Request validation with express-validator
-- **Error Handling:** Global error handling without exposing stack traces
+Frontend:
 
-## Deployment
+```bash
+npm run dev:client
+```
 
-For detailed deployment instructions, see `DEPLOYMENT.md`.
+### Local Development URLs
 
-### Quick Deployment Summary
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| Backend | http://localhost:5000 |
+| API Base URL | http://localhost:5000/api |
 
-**Frontend (Vercel):**
-- Root directory: `client`
-- Build command: `npm run build`
-- Environment: `VITE_API_URL=https://your-backend-url/api`
+---
 
-**Backend (Render/Railway):**
-- Root directory: `server`
-- Start command: `npm start`
-- Environment: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, `CLIENT_URL`
+## 🔌 API Documentation
 
-**Database (Supabase):**
-- Create a project and run the SQL migrations (`SUPABASE_SETUP.md`)
-- Copy the Project URL and service_role key into the backend environment
+The backend exposes RESTful API endpoints.
 
-## Performance Optimizations
+| Module | Base Endpoint | Functionality |
+|---|---|---|
+| Authentication | `/api/auth` | Registration, login, password management |
+| Products | `/api/products` | Product browsing and management |
+| Categories | `/api/categories` | Category management |
+| Cart | `/api/cart` | Shopping cart operations |
+| Wishlist | `/api/wishlist` | Wishlist management |
+| Orders | `/api/orders` | Order creation and tracking |
+| Users | `/api/users` | User profiles and addresses |
+| Reviews | `/api/reviews` | Product reviews and moderation |
+| Coupons | `/api/coupons` | Discount coupon management |
+| Admin | `/api/admin` | Dashboard and inventory management |
 
-- **Frontend:**
-  - Lazy loading images with `loading="lazy"` and `decoding="async"`
-  - Optimized bundle with Vite
-  - Code splitting with React Router
-  - Responsive design with Tailwind CSS
+Protected endpoints require authentication. Administrative endpoints additionally require appropriate authorization.
 
-- **Backend:**
-  - Transactional Postgres functions for checkout, cancellation and cart updates
-  - Indexed database queries
-  - Rate limiting to prevent abuse
-  - Dashboard analytics computed in a single SQL function
+---
 
-- **Database:**
-  - Proper indexes on frequently queried fields
-  - PostgreSQL full-text search (`tsvector` + GIN index) for product search
-  - Foreign keys, unique and check constraints for data integrity
+## 🔐 Security Features
 
-## Testing
+BUY-BEE incorporates several backend security mechanisms:
 
-### Manual Testing Checklist
+- Password hashing using bcrypt.
+- JWT-based authentication.
+- Role-based authorization.
+- Protected administrative routes.
+- Express Helmet security headers.
+- CORS configuration.
+- API rate limiting.
+- Request validation using express-validator.
+- Centralized error handling.
+- Server-side Supabase credentials.
+- PostgreSQL constraints and database security policies.
+- Secure separation of frontend and backend environment variables.
 
-**Customer Flow:**
-- [ ] Register new account
-- [ ] Login with credentials
-- [ ] Browse products
-- [ ] Search for products
-- [ ] Filter by category, brand, price
-- [ ] Sort products
-- [ ] View product details
-- [ ] Add to wishlist
-- [ ] Add to cart
-- [ ] Update cart quantity
-- [ ] Remove from cart
-- [ ] Apply coupon code
-- [ ] Complete checkout
-- [ ] View order history
-- [ ] Track order status
-- [ ] Cancel order
-- [ ] Submit product review
-- [ ] Update profile
-- [ ] Manage addresses
-- [ ] Change password
-- [ ] Logout
+---
 
-**Admin Flow:**
-- [ ] Admin login
-- [ ] View dashboard analytics
-- [ ] Create product
-- [ ] Edit product
-- [ ] Deactivate product
-- [ ] Create category
-- [ ] Manage inventory
-- [ ] View orders
-- [ ] Update order status
-- [ ] View users
-- [ ] Manage user status
-- [ ] Create coupon
-- [ ] Moderate reviews
-- [ ] View low stock alerts
+## 🚀 Deployment
 
-## Troubleshooting
+The application can be deployed using the following services.
 
-### Common Issues
+### Frontend – Vercel
 
-**Supabase Connection Failed:**
-- Verify `SUPABASE_URL` and that `SUPABASE_SERVICE_ROLE_KEY` is the service_role key
-- Make sure the SQL migrations were run (see `SUPABASE_SETUP.md`)
+Recommended configuration:
 
-**CORS Errors:**
-- Verify `CLIENT_URL` in backend matches frontend URL
-- Check CORS configuration in `server/src/index.js`
+```text
+Root Directory: client
+Build Command: npm run build
+```
 
-**Authentication Issues:**
-- Verify `JWT_SECRET` is set and consistent
-- Check token expiration settings
-- Clear browser localStorage if needed
+Environment variable:
 
-**Build Errors:**
-- Ensure all dependencies are installed
-- Check Node.js version compatibility
-- Verify environment variables are set
+```env
+VITE_API_URL=https://YOUR_BACKEND_URL/api
+```
 
-## Contributing
+### Backend – Render / Railway
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+Recommended configuration:
 
-## License
+```text
+Root Directory: server
+Start Command: npm start
+```
+
+Required environment variables:
+
+```env
+PORT
+NODE_ENV
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
+JWT_SECRET
+CLIENT_URL
+```
+
+### Database – Supabase
+
+1. Create a Supabase project.
+2. Execute the SQL migrations.
+3. Configure the backend environment variables.
+4. Verify database connectivity.
+5. Test authentication and database operations.
+
+Refer to `DEPLOYMENT.md` for detailed deployment instructions.
+
+---
+
+## 🧪 Testing
+
+The project includes an API test suite under:
+
+```text
+server/tests/api.test.js
+```
+
+Run the tests using the scripts configured in the backend package.
+
+### Customer Testing Checklist
+
+- [ ] User registration and login
+- [ ] Product browsing and searching
+- [ ] Product filtering and sorting
+- [ ] Shopping cart operations
+- [ ] Wishlist operations
+- [ ] Coupon validation
+- [ ] Checkout and order creation
+- [ ] Order history and tracking
+- [ ] Order cancellation
+- [ ] Product reviews
+- [ ] Profile and address management
+
+### Admin Testing Checklist
+
+- [ ] Admin authentication
+- [ ] Dashboard analytics
+- [ ] Product management
+- [ ] Category management
+- [ ] Order management
+- [ ] User management
+- [ ] Inventory management
+- [ ] Coupon management
+- [ ] Review moderation
+
+---
+
+## 🔮 Future Enhancements
+
+- Razorpay / Stripe payment gateway integration.
+- Automated order confirmation emails.
+- Cloudinary or AWS S3 product image uploads.
+- Advanced product recommendations.
+- Real-time order tracking.
+- Google and social authentication.
+- Multi-language support.
+- Mobile application using React Native.
+- Advanced business analytics.
+
+---
+
+## 🤝 Contributing
+
+Contributions, suggestions, and improvements are welcome.
+
+1. Fork the repository.
+2. Create a feature branch.
+3. Commit your changes.
+4. Push your branch.
+5. Submit a Pull Request.
+
+---
+
+## 📄 License
 
 This project is proprietary software. All rights reserved.
 
-## Support
+---
 
-For issues and questions:
-- Check the documentation in `SUPABASE_SETUP.md` and `DEPLOYMENT.md`
-- Review the API documentation above
-- Check the troubleshooting section
+## 👨‍💻 Developer
 
-## Future Enhancements
+**Naveen Asundi**
 
-- Payment gateway integration (Razorpay/Stripe)
-- Email notifications for orders and password resets
-- Product image upload functionality (Cloudinary/S3)
-- Advanced search with Elasticsearch
-- Real-time order tracking with WebSocket
-- Mobile app development (React Native)
-- Advanced analytics and reporting
-- Multi-language support
-- Currency conversion
-- Social login integration (Google, Facebook)
-- Product recommendations based on browsing history
+BCA Student | Aspiring Software Developer
+
+- GitHub: [Naveen25-As](https://github.com/Naveen25-As)
+- Project: [BUY-BEE](https://github.com/Naveen25-As/BUY-BEE)
+
+---
+
+<p align="center">
+  <b>BUY-BEE – Your Smart Shopping Destination 🛒</b>
+  <br>
+  Built with React, Node.js, Express.js and Supabase.
+</p>
