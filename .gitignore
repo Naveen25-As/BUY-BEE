@@ -3,11 +3,11 @@ node_modules/
 client/node_modules/
 server/node_modules/
 
-# Environment variables
+# Environment variables and secrets
 .env
-.env.local
-.env.production
-.env.*.local
+.env.*
+!.env.example
+!.env.*.example
 
 # Build outputs
 dist/
